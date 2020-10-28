@@ -8,19 +8,19 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
-type Symptom struct {
+type Specialty struct {
 	Id   int
 	Name string
 }
 
-func (s *Store) CreateOrUpdateSymptom(ctx context.Context, symptom *Symptom) error {
-	sql, _, err := goqu.Insert("symptom").
+func (s *Store) CreateOrUpdateSpecialty(ctx context.Context, specialty *Specialty) error {
+	sql, _, err := goqu.Insert("specialty").
 		Rows(goqu.Record{
-			"id":   symptom.Id,
-			"name": symptom.Name,
+			"id":   specialty.Id,
+			"name": specialty.Name,
 		}).
 		OnConflict(goqu.DoUpdate("id", goqu.Record{
-			"name": symptom.Name,
+			"name": specialty.Name,
 		})).ToSQL()
 	if err != nil {
 		return fmt.Errorf("sql query build failed: %v", err)
@@ -32,8 +32,8 @@ func (s *Store) CreateOrUpdateSymptom(ctx context.Context, symptom *Symptom) err
 	return nil
 }
 
-func (s *Store) GetAllSymptoms(ctx context.Context) ([]*Symptom, error) {
-	sql, _, err := goqu.Select().From("symptom").ToSQL()
+func (s *Store) GetAllSpecialty(ctx context.Context) ([]*Specialty, error) {
+	sql, _, err := goqu.Select().From("specialty").ToSQL()
 	if err != nil {
 		return nil, fmt.Errorf("sql query build failed: %v", err)
 	}
@@ -44,21 +44,21 @@ func (s *Store) GetAllSymptoms(ctx context.Context) ([]*Symptom, error) {
 	}
 	defer rows.Close()
 
-	var symptoms []*Symptom
+	var specialty []*Specialty
 
 	for rows.Next() {
-		symptom, err := readSymptom(rows)
+		s, err := readSpecialty(rows)
 		if err != nil {
-			return nil, fmt.Errorf("read symptom failed: %v", symptom)
+			return nil, fmt.Errorf("read specialty failed: %v", s)
 		}
-		symptoms = append(symptoms, symptom)
+		specialty = append(specialty, s)
 	}
 
-	return symptoms, nil
+	return specialty, nil
 }
 
-func readSymptom(row pgx.Row) (*Symptom, error) {
-	var s Symptom
+func readSpecialty(row pgx.Row) (*Specialty, error) {
+	var s Specialty
 
 	err := row.Scan(&s.Id, &s.Name)
 	if err != nil {

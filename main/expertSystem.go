@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"expertSystem/src/store"
@@ -14,16 +15,16 @@ func main() {
 		Name: "expertSystem",
 		User: "postgres",
 	}
-	connPool, err := store.New(conf)
+	s, err := store.New(conf)
 	if err != nil {
 		log.Fatalf("create a connection pool failed: %v", err)
 	}
 
-	symptom := &store.Symptom{
-		Id:   1,
-		Name: "Боль в горле",
+	symptoms, err := s.GetAllSymptoms(context.Background())
+	if err != nil {
+		log.Fatalf("get all symptoms failed: %v", err)
 	}
-	if err := connPool.CreateOrUpdateSymptom(context.Background(), symptom); err != nil {
-		log.Fatalf("create or update sympom failed: %v", err)
+	for _, s := range symptoms {
+		fmt.Println(s.Name)
 	}
 }
