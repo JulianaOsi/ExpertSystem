@@ -19,11 +19,11 @@ func (s *Store) CreateOrUpdateQuestion(ctx context.Context, question *Question) 
 		Rows(goqu.Record{
 			"id":         question.Id,
 			"text":       question.Text,
-			"id_symptom": question.SymptomId,
+			"symptom_id": question.SymptomId,
 		}).
 		OnConflict(goqu.DoUpdate("id", goqu.Record{
 			"text":       question.Text,
-			"id_symptom": question.SymptomId,
+			"symptom_id": question.SymptomId,
 		})).ToSQL()
 	if err != nil {
 		return fmt.Errorf("sql query build failed: %v", err)
@@ -37,6 +37,34 @@ func (s *Store) CreateOrUpdateQuestion(ctx context.Context, question *Question) 
 
 func (s *Store) GetAllQuestions(ctx context.Context) ([]*Question, error) {
 	sql, _, err := goqu.Select().From("question").ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("sql query build failed: %v", err)
+	}
+
+	rows, err := s.connPool.Query(ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("execute a query failed: %v", err)
+	}
+	defer rows.Close()
+
+	var questions []*Question
+
+	for rows.Next() {
+		question, err := readQuestion(rows)
+		if err != nil {
+			return nil, fmt.Errorf("read question failed: %v", question)
+		}
+		questions = append(questions, question)
+	}
+
+	return questions, nil
+}
+
+func (s *Store) GetQuestionsBySymptomId(ctx context.Context, symptomId string) ([]*Question, error) {
+	sql, _, err := goqu.Select().
+		From("question").
+		Where(goqu.C("symptom_id").Eq(symptomId)).
+		ToSQL()
 	if err != nil {
 		return nil, fmt.Errorf("sql query build failed: %v", err)
 	}

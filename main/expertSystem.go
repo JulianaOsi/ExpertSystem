@@ -10,10 +10,11 @@ import (
 
 func main() {
 	conf := &store.ConfigDB{
-		Host: "localhost",
-		Port: "5432",
-		Name: "expertSystem",
-		User: "postgres",
+		Host:     "ekb.urai.ru",
+		Port:     "9811",
+		Name:     "ExpertSystem",
+		User:     "postgres",
+		Password: "******",
 	}
 	s, err := store.New(conf)
 	if err != nil {
@@ -26,5 +27,13 @@ func main() {
 	}
 	for _, s := range symptoms {
 		fmt.Println(s.Name)
+	}
+
+	questions, err := s.GetQuestionsBySymptomId(context.Background(), "1")
+	if err != nil {
+		log.Fatalf("get questions by symptomId failed: %v", err)
+	}
+	for _, q := range questions {
+		fmt.Println(q.Text)
 	}
 }

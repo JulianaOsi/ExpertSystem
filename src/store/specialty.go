@@ -9,18 +9,21 @@ import (
 )
 
 type Specialty struct {
-	Id   int
-	Name string
+	Id          int
+	Name        string
+	DiagnosisId int
 }
 
 func (s *Store) CreateOrUpdateSpecialty(ctx context.Context, specialty *Specialty) error {
 	sql, _, err := goqu.Insert("specialty").
 		Rows(goqu.Record{
-			"id":   specialty.Id,
-			"name": specialty.Name,
+			"id":           specialty.Id,
+			"name":         specialty.Name,
+			"diagnosis_id": specialty.DiagnosisId,
 		}).
 		OnConflict(goqu.DoUpdate("id", goqu.Record{
-			"name": specialty.Name,
+			"name":         specialty.Name,
+			"diagnosis_id": specialty.DiagnosisId,
 		})).ToSQL()
 	if err != nil {
 		return fmt.Errorf("sql query build failed: %v", err)
@@ -57,10 +60,38 @@ func (s *Store) GetAllSpecialty(ctx context.Context) ([]*Specialty, error) {
 	return specialty, nil
 }
 
+func (s *Store) GetSpecialtyByDiagnosisId (ctx context.Context, diagnosisId string) ([]*Specialty, error){
+	sql, _, err := goqu.Select().
+		From("specialty").
+		Where(goqu.C("diagnosis_id").Eq(diagnosisId)).
+		ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("sql query build failed: %v", err)
+	}
+
+	rows, err := s.connPool.Query(ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("execute a query failed: %v", err)
+	}
+	defer rows.Close()
+
+	var specialty []*Specialty
+
+	for rows.Next() {
+		s, err := readSpecialty(rows)
+		if err != nil {
+			return nil, fmt.Errorf("read specialty failed: %v", s)
+		}
+		specialty = append(specialty, s)
+	}
+
+	return specialty, nil
+}
+
 func readSpecialty(row pgx.Row) (*Specialty, error) {
 	var s Specialty
 
-	err := row.Scan(&s.Id, &s.Name)
+	err := row.Scan(&s.Id, &s.Name, &s.DiagnosisId)
 	if err != nil {
 		return nil, err
 	}

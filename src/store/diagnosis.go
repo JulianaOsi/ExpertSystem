@@ -9,21 +9,18 @@ import (
 )
 
 type Diagnosis struct {
-	Id          int
-	Name        string
-	SpecialtyId int
+	Id   int
+	Name string
 }
 
 func (s *Store) CreateOrUpdateDiagnosis(ctx context.Context, diagnosis *Diagnosis) error {
 	sql, _, err := goqu.Insert("diagnosis").
 		Rows(goqu.Record{
-			"id":           diagnosis.Id,
-			"name":         diagnosis.Name,
-			"id_specialty": diagnosis.SpecialtyId,
+			"id":   diagnosis.Id,
+			"name": diagnosis.Name,
 		}).
 		OnConflict(goqu.DoUpdate("id", goqu.Record{
-			"name":         diagnosis.Name,
-			"id_specialty": diagnosis.SpecialtyId,
+			"name": diagnosis.Name,
 		})).ToSQL()
 	if err != nil {
 		return fmt.Errorf("sql query build failed: %v", err)
@@ -63,7 +60,7 @@ func (s *Store) GetAllDiagnoses(ctx context.Context) ([]*Diagnosis, error) {
 func readDiagnosis(row pgx.Row) (*Diagnosis, error) {
 	var d Diagnosis
 
-	err := row.Scan(&d.Id, &d.Name, &d.SpecialtyId)
+	err := row.Scan(&d.Id, &d.Name)
 	if err != nil {
 		return nil, err
 	}
