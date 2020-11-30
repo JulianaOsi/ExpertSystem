@@ -3,9 +3,10 @@ package store
 import (
 	"context"
 	"fmt"
-
 	"github.com/jackc/pgx/v4/pgxpool"
 )
+
+var DB *Store
 
 type Store struct {
 	connPool *pgxpool.Pool
@@ -19,15 +20,21 @@ type ConfigDB struct {
 	Password string
 }
 
-func New(config *ConfigDB) (*Store, error) {
-	pool, err := pgxpool.Connect(context.Background(), config.toString())
+func InitDB(config *ConfigDB) error {
+	pool, err := pgxpool.Connect(context.Background(), config.ToString())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &Store{connPool: pool}, nil
+
+	DB = &Store{connPool: pool}
+	return nil
 }
 
-func (c *ConfigDB) toString() string {
-	return fmt.Sprintf("host=%s port=%s dbname=%s user=%s password=%s sslmode=disable search_path=public",
-		c.Host, c.Port, c.Name, c.User, c.Password)
+func (c *ConfigDB) ToString() string {
+	if c.Password != "" {
+		return fmt.Sprintf("host=%s port=%s dbname=%s user=%s password=%s sslmode=disable search_path=public",
+			c.Host, c.Port, c.Name, c.User, c.Password)
+	}
+	return fmt.Sprintf("host=%s port=%s dbname=%s user=%s sslmode=disable search_path=public",
+		c.Host, c.Port, c.Name, c.User)
 }
