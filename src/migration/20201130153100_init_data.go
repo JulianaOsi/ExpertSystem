@@ -12,16 +12,17 @@ func init() {
 
 func upInitData(tx *sql.Tx) error {
 	_, err := tx.Exec(`
-INSERT INTO diagnosis (id, title) 
+INSERT INTO diagnosis (id, title, id_symptom) 
 VALUES 
-       (1, 'перелом рёбер'),
-	   (3, 'приступ стенокардии при ишемической болезни сердца'),
-       (5, 'воспаление легких'),
-       (7, 'пневмоторакс'),
-       (8, 'эзофалит'),
-       (9, 'опоясывающий лишай'),
-       (10, 'можно предположить инфаркт миокарда'),
-       (11, 'межреберная невралгия');
+       (1, 'перелом рёбер', 1),
+	   (3, 'приступ стенокардии при ишемической болезни сердца', 1),
+       (5, 'воспаление легких', 1),
+       (7, 'пневмоторакс', 1),
+       (8, 'эзофалит', 1),
+       (9, 'опоясывающий лишай', 1),
+       (10, 'можно предположить инфаркт миокарда', 1),
+       (11, 'межреберная невралгия', 1),
+       (12, 'нет диагноза', 1);
        
 INSERT INTO question (id, text, symptom_id) 
 VALUES 
@@ -58,6 +59,11 @@ VALUES
        (8, 'боль в области лица'),
        (9, 'боль в горле');
 
+INSERT INTO knowledge (id_symptom, is_root, id_question, id_true_question, id_false_question, id_diagnosis) 
+VALUES 
+       (1, TRUE, 1, 2, 3, NULL),
+       (1, FALSE, NULL, NULL, NULL, 1),
+       (1, FALSE, NULL, NULL, NULL, NULL);
 `)
 	return err
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"expertSystem/src/config"
 	migrations "expertSystem/src/migration"
+	"expertSystem/src/server"
 	"expertSystem/src/store"
 	_ "github.com/lib/pq"
 	"log"
@@ -20,7 +21,7 @@ func main() {
 		log.Fatalf("failed to create store: %v\n", err)
 	}
 
-	//server.LaunchServer()
+	server.LaunchServer()
 	/*
 		s, err := store.New(conf)
 		if err != nil {

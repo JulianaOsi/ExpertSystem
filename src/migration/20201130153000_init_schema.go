@@ -14,14 +14,16 @@ func upInitSchema(tx *sql.Tx) error {
 	_, err := tx.Exec(`
 CREATE TABLE IF NOT EXISTS diagnosis
 (
-    id   	INT 	NOT NULL,
-    title   TEXT    NOT NULL
+    id   		INT 	NOT NULL,
+    title   	TEXT    NOT NULL,
+	id_symptom 	INT		NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS knowledge
 (
-    id               	INT NOT NULL,
+    id 					SERIAL PRIMARY KEY,
     id_symptom          INT NOT NULL,
+    is_root				BOOLEAN DEFAULT TRUE,
     id_question         INT,
     id_true_question    INT,
     id_false_question 	INT,

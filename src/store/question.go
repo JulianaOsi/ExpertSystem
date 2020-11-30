@@ -60,7 +60,7 @@ func (s *Store) GetAllQuestions(ctx context.Context) ([]*Question, error) {
 	return questions, nil
 }
 
-func (s *Store) GetQuestionsBySymptomId(ctx context.Context, symptomId string) ([]*Question, error) {
+func (s *Store) GetQuestionsBySymptomId(ctx context.Context, symptomId int) ([]*Question, error) {
 	sql, _, err := goqu.Select().
 		From("question").
 		Where(goqu.C("symptom_id").Eq(symptomId)).
@@ -86,6 +86,38 @@ func (s *Store) GetQuestionsBySymptomId(ctx context.Context, symptomId string) (
 	}
 
 	return questions, nil
+}
+
+func (s *Store) GetQuestionsById(ctx context.Context, id *int) (*Question, error) {
+	sql, _, err := goqu.Select().
+		From("question").
+		Where(goqu.C("id").Eq(id)).
+		ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("sql query build failed: %v", err)
+	}
+
+	rows, err := s.connPool.Query(ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("execute a query failed: %v", err)
+	}
+	defer rows.Close()
+
+	var questions []*Question
+
+	for rows.Next() {
+		question, err := readQuestion(rows)
+		if err != nil {
+			return nil, fmt.Errorf("read question failed: %v", question)
+		}
+		questions = append(questions, question)
+	}
+
+	if len(questions) == 1 {
+		return questions[0], nil
+	}
+
+	return nil, fmt.Errorf("questions arr failed: %v", err)
 }
 
 func readQuestion(row pgx.Row) (*Question, error) {

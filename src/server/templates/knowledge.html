@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form action="./add" method="post">
+    <label for="cars">Your turn:</label>
+    <select id="question" name="question">
+        {{range .Questions}}<option value="{{.Id}}">{{.Text}}</option>{{end}}
+    </select>
+    <select id="true" name="true">
+        {{range .Knowledge}}<option value="{{.Id}}">{{.Id}}</option>{{end}}
+    </select>
+    <select id="false" name="false">
+        {{range .Knowledge}}<option value="{{.Id}}">{{.Id}}</option>{{end}}
+    </select>
+    <select id="diagnosis" name="diagnosis">
+        {{range .Diagnosis}}<option value="{{.Id}}">{{.Name}}</option>{{end}}
+    </select>
+    <select hidden name="is_root">
+        <option value="true"></option>
+    </select>
+
+    <input type="submit">
+</form>
+</body>
+</html>

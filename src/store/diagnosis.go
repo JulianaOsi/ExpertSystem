@@ -9,18 +9,21 @@ import (
 )
 
 type Diagnosis struct {
-	Id   int
-	Name string
+	Id        int
+	Name      string
+	SymptomId int
 }
 
 func (s *Store) CreateOrUpdateDiagnosis(ctx context.Context, diagnosis *Diagnosis) error {
 	sql, _, err := goqu.Insert("diagnosis").
 		Rows(goqu.Record{
-			"id":   diagnosis.Id,
-			"name": diagnosis.Name,
+			"id":         diagnosis.Id,
+			"name":       diagnosis.Name,
+			"id_symptom": diagnosis.SymptomId,
 		}).
 		OnConflict(goqu.DoUpdate("id", goqu.Record{
-			"name": diagnosis.Name,
+			"name":       diagnosis.Name,
+			"id_symptom": diagnosis.SymptomId,
 		})).ToSQL()
 	if err != nil {
 		return fmt.Errorf("sql query build failed: %v", err)
@@ -57,10 +60,38 @@ func (s *Store) GetAllDiagnoses(ctx context.Context) ([]*Diagnosis, error) {
 	return diagnoses, nil
 }
 
+func (s *Store) GetDiagnosisBySymptomId(ctx context.Context, symptomId int) ([]*Diagnosis, error) {
+	sql, _, err := goqu.Select().
+		From("diagnosis").
+		Where(goqu.C("id_symptom").Eq(symptomId)).
+		ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("sql query build failed: %v", err)
+	}
+
+	rows, err := s.connPool.Query(ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("execute a query failed: %v", err)
+	}
+	defer rows.Close()
+
+	var diagnosis []*Diagnosis
+
+	for rows.Next() {
+		d, err := readDiagnosis(rows)
+		if err != nil {
+			return nil, fmt.Errorf("read diagnosis failed: %v", d)
+		}
+		diagnosis = append(diagnosis, d)
+	}
+
+	return diagnosis, nil
+}
+
 func readDiagnosis(row pgx.Row) (*Diagnosis, error) {
 	var d Diagnosis
 
-	err := row.Scan(&d.Id, &d.Name)
+	err := row.Scan(&d.Id, &d.Name, &d.SymptomId)
 	if err != nil {
 		return nil, err
 	}
