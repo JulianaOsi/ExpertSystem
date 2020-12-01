@@ -11,10 +11,10 @@
         {{range .Questions}}<option value="{{.Id}}">{{.Text}}</option>{{end}}
     </select>
     <select id="true" name="true">
-        {{range .Knowledge}}<option value="{{.Id}}">{{.Id}}</option>{{end}}
+        {{range .Questions}}<option value="{{.Id}}">{{.Text}}</option>{{end}}
     </select>
     <select id="false" name="false">
-        {{range .Knowledge}}<option value="{{.Id}}">{{.Id}}</option>{{end}}
+        {{range .Questions}}<option value="{{.Id}}">{{.Text}}</option>{{end}}
     </select>
     <select id="diagnosis" name="diagnosis">
         {{range .Diagnosis}}<option value="{{.Id}}">{{.Name}}</option>{{end}}
@@ -22,7 +22,7 @@
     <select hidden name="is_root">
         <option value="true"></option>
     </select>
-
+    {{.Amount}}
     <input type="submit">
 </form>
 </body>

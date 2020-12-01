@@ -106,21 +106,53 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 	type viewData struct {
 		Knowledge *store.Knowledge
 		Question  *store.Question
+		Diagnosis *store.Diagnosis
 	}
 	var v viewData
 	var err error
 	vars := mux.Vars(r)
-	symptomId, err := strconv.Atoi(vars["knowledge"])
+	knowledgeId, err := strconv.Atoi(vars["knowledge"])
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logrus.Errorf("failed to convert string to int: %v\n", err)
 		return
 	}
 
-	v.Knowledge, err = store.DB.GetKnowledgeById(context.Background(), symptomId)
+	v.Knowledge, err = store.DB.GetKnowledgeById(context.Background(), knowledgeId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logrus.Errorf("failed to get root knowledge: %v\n", err)
+		return
+	}
+
+	if v.Knowledge.DiagnosisId != nil {
+		v.Diagnosis, err = store.DB.GetDiagnosisById(context.Background(), *v.Knowledge.DiagnosisId)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			logrus.Errorf("failed to get diagnosis by id: %v\n", err)
+			return
+		}
+
+		temp, err := template.ParseFiles("src/server/templates/conclusion.html")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			logrus.Errorf("failed to parse html: %v\n", err)
+			return
+		}
+		buf := new(bytes.Buffer)
+		err = temp.Execute(buf, v)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			logrus.Errorf("failed to execute template: %v\n", err)
+			return
+		}
+
+		_, err = w.Write(buf.Bytes())
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			logrus.Errorf("failed to write response: %v\n", err)
+			return
+		}
 		return
 	}
 
@@ -193,6 +225,7 @@ func knowledgeHandler(w http.ResponseWriter, r *http.Request) {
 		Questions []*store.Question
 		Knowledge []*store.Knowledge
 		Diagnosis []*store.Diagnosis
+		Amount    int
 	}
 	var v viewData
 	var err error
@@ -224,6 +257,15 @@ func knowledgeHandler(w http.ResponseWriter, r *http.Request) {
 		logrus.Errorf("failed to get diagnosis by symptom id: %v\n", err)
 		return
 	}
+
+	k, err := store.DB.GetAllKnowledge(context.Background())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logrus.Errorf("failed to get all knowledge: %v\n", err)
+		return
+	}
+
+	v.Amount = len(k)
 
 	temp, err := template.ParseFiles("src/server/templates/knowledge.html")
 	if err != nil {
