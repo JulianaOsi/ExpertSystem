@@ -10,12 +10,12 @@ import (
 
 type Knowledge struct {
 	Id              int
-	SymptomId       int
-	IsRoot          bool
-	QuestionId      *int
-	TrueQuestionId  *int
-	FalseQuestionId *int
-	DiagnosisId     *int
+	SymptomId       int  `json:"directionId"`
+	IsRoot          bool `json:"is_root"`
+	QuestionId      *int `json:"question"`
+	TrueQuestionId  *int `json:"k_id_true"`
+	FalseQuestionId *int `json:"k_id_false"`
+	DiagnosisId     *int `json:"diagnosis"`
 }
 
 func (s *Store) CreateKnowledge(ctx context.Context, knowledge Knowledge) error {

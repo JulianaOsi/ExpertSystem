@@ -3,10 +3,13 @@ package server
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"expertSystem/src/store"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"html/template"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -290,28 +293,31 @@ func knowledgeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func addKnowledgeHandler(w http.ResponseWriter, r *http.Request) {
+	type knowledge struct {
+		Ks []store.Knowledge `json:"knowledges"`
+	}
 	vars := mux.Vars(r)
 	symptomId, _ := strconv.Atoi(vars["symptom"])
+	k := knowledge{}
 
-	var knowledge store.Knowledge
-	isRoot, _ := strconv.ParseBool(r.FormValue("is_root"))
-	question, _ := strconv.Atoi(r.FormValue("question"))
-	trueQ, _ := strconv.Atoi(r.FormValue("true"))
-	falseQ, _ := strconv.Atoi(r.FormValue("false"))
-	diagnosis, _ := strconv.Atoi(r.FormValue("diagnosis"))
-
-	knowledge.SymptomId = symptomId
-	knowledge.IsRoot = isRoot
-	knowledge.QuestionId = &question
-	knowledge.TrueQuestionId = &trueQ
-	knowledge.FalseQuestionId = &falseQ
-	knowledge.DiagnosisId = &diagnosis
-
-	err := store.DB.CreateKnowledge(context.Background(), knowledge)
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		logrus.Errorf("failed to create knowledge: %v\n", err)
-		return
+		log.Fatalf("failed to read body: %v\n", err)
+	}
+
+	err = json.Unmarshal(body, &k)
+	if err != nil {
+		log.Fatalf("failed to unmarshal json: %v\n", err)
+	}
+
+	for i, _ := range k.Ks {
+		k.Ks[i].SymptomId = symptomId
+		err := store.DB.CreateKnowledge(context.Background(), k.Ks[i])
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			logrus.Errorf("failed to create knowledge: %v\n", err)
+			return
+		}
 	}
 
 	r, err = http.NewRequest(http.MethodGet, "/knowledge", bytes.NewReader([]byte("")))
