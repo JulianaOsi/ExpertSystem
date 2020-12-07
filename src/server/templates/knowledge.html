@@ -12,7 +12,10 @@
 
     <style type="text/css">
         body {
-            padding-top: 5rem;
+            padding-top: 3rem;
+        }
+        main {
+            padding: 3rem;
         }
         /* width */
         ::-webkit-scrollbar {
@@ -34,6 +37,13 @@
             cursor: pointer;
             /* display: none; */
         }
+        .deleter:hover {
+            color: red;
+            cursor: pointer;
+        }
+        .title {
+            cursor: default;
+        }
     </style>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
@@ -42,58 +52,63 @@
 
 </head>
 <body>
+<div>
+    {{range .Knowledge}}<p>{{.InnerId}} {{.SymptomId}}</p>> {{end}}
+</div>
 <ul class="nav justify-content-center">
     <li class="nav-item d-inline-flex">
-        <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Knowledge base</a>
-        <button id="saveBtn" class="btn btn-primary" type="button">Save</button>
+        <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">База знаний</a>
+        <button id="saveBtn" class="btn btn-primary" type="button">Сохранить изменения</button>
     </li>
 </ul>
+<main>
+    <div k_id class="question-card card d-inline-flex shadow bg-white rounded">
+        <div class="rounded-top badge-primary d-flex justify-content-between"><div class="title px-2 py-1">Вопрос</div><div class="deleter px-2 py-1">Удалить</div></div>
+        <div class="card-body p-2">
+            <div class="list-group list-group-flush">
+                <details class="list-group-item">
+                    <summary class="text-summary">text</summary>
+                    <div class="form-group">
+                        <select name="questions" class="question-select form-control-sm">
+                        </select>
+                    </div>
+                </details>
 
-<div k_id class="question-card card d-inline-flex shadow bg-white rounded" style="width: 20rem;">
-    <div class="badge-primary p-2 text-center">Question</div>
-    <div class="card-body p-2">
-        <div class="list-group list-group-flush">
-            <details class="list-group-item">
-                <summary class="text-summary">text</summary>
-                <div class="form-group">
-                    <select name="questions" class="question-select form-control-sm">
-                    </select>
-                </div>
-            </details>
+                <details condition="true" class="list-group-item">
+                    <summary class="text-success">ответ "Да":</summary>
+                    <p class="create-question badge badge-primary">вопрос</p>
+                    <p class="create-diagnosis badge badge-primary">диагноз</p>
+                </details>
 
-            <details condition="true" class="list-group-item">
-                <summary class="text-success">true</summary>
-                <p class="create-question badge badge-primary">question</p>
-                <p class="create-diagnosis badge badge-primary">diagnosis</p>
-            </details>
-
-            <details condition="false" class="list-group-item">
-                <summary class="text-danger">false</summary>
-                <p class="create-question badge badge-primary">question</p>
-                <p class="create-diagnosis badge badge-primary">diagnosis</p>
-            </details>
+                <details condition="false" class="list-group-item">
+                    <summary class="text-danger">ответ "Нет":</summary>
+                    <p class="create-question badge badge-primary">вопрос</p>
+                    <p class="create-diagnosis badge badge-primary">диагноз</p>
+                </details>
+            </div>
         </div>
     </div>
-</div>
 
-<div k_id class="diagnosis-card card d-inline-flex shadow bg-white rounded" style="width: 20rem;">
-    <div class="badge-secondary p-2 text-center">Diagnosis</div>
-    <div class="card-body p-2">
-        <div class="list-group list-group-flush">
-            <details class="list-group-item">
-                <summary class="text-summary">text</summary>
-                <div class="form-group">
-                    <select name="diagnoses" class="diagnosis-select form-control-sm">
-                    </select>
-                </div>
-            </details>
+    <div k_id class="diagnosis-card card d-inline-flex shadow bg-white rounded">
+        <div class="rounded-top badge-secondary d-flex justify-content-between"><div class="title px-2 py-1">Диагноз</div><div class="deleter px-2 py-1">Удалить</div></div>
+        <div class="card-body p-2">
+            <div class="list-group list-group-flush">
+                <details class="list-group-item">
+                    <summary class="text-summary">text</summary>
+                    <div class="form-group">
+                        <select name="diagnoses" class="diagnosis-select form-control-sm">
+                        </select>
+                    </div>
+                </details>
+            </div>
         </div>
     </div>
-</div>
+</main>
 
 <!-- Optional JavaScript -->
 <script>
     var amount = parseInt("{{.Amount}}");
+    var currAmount = 0;
     var questionsDict;
     var diagnosesDict;
 
@@ -108,9 +123,8 @@
             var map = {};
             for (var i = 0; i < questionsSplit.length; i++) {
                 var keyValuePair = questionsSplit[i].split(".");
-                for (var j = 0; j < keyValuePair.length; j++) {
+                for (var j = 0; j < keyValuePair.length; j++)
                     map[parseInt(keyValuePair[0])] = keyValuePair[1];
-                }
             }
 
             return map;
@@ -118,7 +132,6 @@
         ,
         newCard: function (card, data) {
             var res = $(card).clone();
-
             var selection = res.find(".form-control-sm");
 
             Object.keys(data).forEach(function(key) {
@@ -135,6 +148,11 @@
             return JQFUNS.newCard(questionCard, questionsDict);
         }
         ,
+        onNewCardCreated: function (card, creator) {
+            card.insertAfter(creator);
+            card.attr("k_id", currAmount++);
+        }
+        ,
         newDiagnosisCard: function () {
             return JQFUNS.newCard(diagnosisCard, diagnosesDict);
         }
@@ -143,27 +161,31 @@
         questionsDict = JQFUNS.parseStrData("{{range .Questions}}{{.Id}}.{{.Text}}\n{{end}}");
         diagnosesDict = JQFUNS.parseStrData("{{range .Diagnosis}}{{.Id}}.{{.Name}}\n{{end}}");
 
-        var $temp = $( ".question-card" );
-        questionCard = $temp.clone();
-        $temp.remove();
-        $temp = $( ".diagnosis-card" );
-        diagnosisCard = $temp.clone();
-        $temp.remove();
+        questionCard = $( ".question-card" ).clone();
+        diagnosisCard = $( ".diagnosis-card" ).clone();
+        $(".card").remove();
         var card = JQFUNS.newQuestionCard();
-        card.insertAfter(".nav");
-        card.attr("k_id", ++amount);
-        $(".list-group").attr('depth', 0);
-        // $("details").attr('open', "");
+        card.appendTo("main");
+        card.attr("k_id", currAmount++);
+        card.find(".text-summary").first().text(card.find(":selected").text());
+        card.find(".deleter").first().remove();
     };
+
+    $(document).on('click', '.deleter', function () {
+        var cardForDelete = $(this).parent().parent();
+        var details = cardForDelete.parent();
+        details.children().show();
+        cardForDelete.remove();
+        currAmount --;
+    });
 
     $(document).on('click', '.create-question', function () {
         $(this).parent().find(".badge").hide();
 
         var depth = parseInt($(this).parent().parent().attr("depth")) + 1;
         var newQuestion = JQFUNS.newQuestionCard();
-        newQuestion.insertAfter(this);
-        newQuestion.find(".list-group").attr("depth", depth);
-        newQuestion.attr("k_id", ++amount);
+        JQFUNS.onNewCardCreated(newQuestion, this);
+
     });
 
     $(document).on('click', '.create-diagnosis', function () {
@@ -171,18 +193,14 @@
 
         var depth = parseInt($(this).parent().parent().attr("depth")) + 1;
         var newDiagnosis = JQFUNS.newDiagnosisCard();
-        newDiagnosis.insertAfter(this);
-        newDiagnosis.find(".list-group").attr("depth", depth);
-        newDiagnosis.attr("k_id", ++amount);
+        JQFUNS.onNewCardCreated(newDiagnosis, this);
     });
 
     $(document).on('click', '.text-summary', function () {
         $(this).hide();
-        // alert("text-summary");
-        // $(this).next().children().mousedown();
     });
 
-    $(document).on('change', ".diagnosis-select, .question-select", function () {
+    $(document).on('change blur focusout', ".diagnosis-select, .question-select", function () {
         var newText = $(this).find(":selected").text();
         var txtSummary = $(this).parent().prev();
         txtSummary.show();
@@ -192,14 +210,14 @@
 
     jQuery('#saveBtn').click(function(event){
         event.preventDefault();
-        // Grab all form data
         var formInputData = new Object();
-        var cards = $("[k_id]");
         formInputData.knowledges = [];
+
+        var cards = $("[k_id]");
 
         for (var i = 0; i < cards.length; i++) {
             var knowledge = new Object();
-            knowledge.is_root = $(cards[i]).parent().is("body");
+            knowledge.id_inner = parseInt($(cards[i]).attr("k_id"));
             knowledge.question = $(cards[i]).find("[name=questions]").first().val();
 
             if (typeof knowledge.question === 'undefined') {
@@ -213,10 +231,8 @@
                 knowledge.question = parseInt(knowledge.question);
                 knowledge.k_id_true = $(cards[i]).find("[condition=true]").first().find(".card").first().attr("k_id");
                 knowledge.k_id_true = (knowledge.k_id_true === undefined)? null : parseInt(knowledge.k_id_true);
-
                 knowledge.k_id_false = $(cards[i]).children().last().children().last().children().last().find(".card").first().attr("k_id");
                 knowledge.k_id_false = (knowledge.k_id_false === undefined)? null : parseInt(knowledge.k_id_false);
-
                 knowledge.diagnosis = null;
             }
 
@@ -224,6 +240,9 @@
         }
 
         var json_data = JSON.stringify(formInputData);
+
+        alert(json_data);
+
         var xhr = new XMLHttpRequest();
         xhr.open("POST", "./add");
         xhr.setRequestHeader("Content-Type", "application/json");
@@ -231,10 +250,6 @@
         alert("Данные сохранены");
     });
 </script>
-
-<!-- Option 1: jQuery and Bootstrap Bundle (includes Popper) -->
-<!-- <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script> -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous"></script> -->
 
 <!-- Option 2: jQuery, Popper.js, and Bootstrap JS -->
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>

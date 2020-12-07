@@ -10,8 +10,8 @@ import (
 
 type Knowledge struct {
 	Id              int
+	InnerId         int  `json:"id_inner"`
 	SymptomId       int  `json:"directionId"`
-	IsRoot          bool `json:"is_root"`
 	QuestionId      *int `json:"question"`
 	TrueQuestionId  *int `json:"k_id_true"`
 	FalseQuestionId *int `json:"k_id_false"`
@@ -21,8 +21,8 @@ type Knowledge struct {
 func (s *Store) CreateKnowledge(ctx context.Context, knowledge Knowledge) error {
 	sql, _, err := goqu.Insert("knowledge").
 		Rows(goqu.Record{
+			"id_inner":          knowledge.InnerId,
 			"id_symptom":        knowledge.SymptomId,
-			"is_root":           knowledge.IsRoot,
 			"id_question":       knowledge.QuestionId,
 			"id_true_question":  knowledge.TrueQuestionId,
 			"id_false_question": knowledge.FalseQuestionId,
@@ -123,7 +123,37 @@ func (s *Store) GetKnowledgeBySymptomId(ctx context.Context, symptomId int) ([]*
 func (s *Store) GetRootKnowledge(ctx context.Context, symptomId int) (*Knowledge, error) {
 	sql, _, err := goqu.Select().From("knowledge").
 		Where(goqu.C("id_symptom").Eq(symptomId),
-			goqu.C("is_root").Eq(true)).ToSQL()
+			goqu.C("id_inner").Eq(0)).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("sql query build failed: %v", err)
+	}
+
+	rows, err := s.connPool.Query(ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("execute a query failed: %v", err)
+	}
+	defer rows.Close()
+
+	var knowledgeArr []*Knowledge
+
+	for rows.Next() {
+		knowledge, err := readKnowledge(rows)
+		if err != nil {
+			return nil, fmt.Errorf("read question failed: %v", knowledge)
+		}
+		knowledgeArr = append(knowledgeArr, knowledge)
+	}
+
+	if len(knowledgeArr) == 1 {
+		return knowledgeArr[0], nil
+	}
+
+	return nil, fmt.Errorf("knowledge arr failed: %v", err)
+}
+
+func (s *Store) GetKnowledgeByInnerId(ctx context.Context, symptomId int, innerId int) (*Knowledge, error) {
+	sql, _, err := goqu.Select().From("knowledge").
+		Where(goqu.C("id_symptom").Eq(symptomId), goqu.C("id_inner").Eq(innerId)).ToSQL()
 	if err != nil {
 		return nil, fmt.Errorf("sql query build failed: %v", err)
 	}
@@ -154,7 +184,7 @@ func (s *Store) GetRootKnowledge(ctx context.Context, symptomId int) (*Knowledge
 func readKnowledge(row pgx.Row) (*Knowledge, error) {
 	var d Knowledge
 
-	err := row.Scan(&d.Id, &d.SymptomId, &d.IsRoot, &d.QuestionId, &d.TrueQuestionId, &d.FalseQuestionId, &d.DiagnosisId)
+	err := row.Scan(&d.Id, &d.InnerId, &d.SymptomId, &d.QuestionId, &d.TrueQuestionId, &d.FalseQuestionId, &d.DiagnosisId)
 	if err != nil {
 		return nil, err
 	}

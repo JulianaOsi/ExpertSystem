@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS diagnosis
 CREATE TABLE IF NOT EXISTS knowledge
 (
     id 					SERIAL PRIMARY KEY,
+    id_inner			INT NOT NULL,
     id_symptom          INT NOT NULL,
-    is_root				BOOLEAN DEFAULT TRUE,
     id_question         INT,
     id_true_question    INT,
     id_false_question 	INT,

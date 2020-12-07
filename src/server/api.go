@@ -121,7 +121,14 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	v.Knowledge, err = store.DB.GetKnowledgeById(context.Background(), knowledgeId)
+	symptom, err := strconv.Atoi(vars["symptom"])
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logrus.Errorf("failed to convert string to int: %v\n", err)
+		return
+	}
+
+	v.Knowledge, err = store.DB.GetKnowledgeByInnerId(context.Background(), symptom, knowledgeId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logrus.Errorf("failed to get root knowledge: %v\n", err)
