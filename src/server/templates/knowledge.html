@@ -52,9 +52,6 @@
 
 </head>
 <body>
-<div>
-    {{range .Knowledge}}<p>{{.InnerId}} {{.SymptomId}}</p>> {{end}}
-</div>
 <ul class="nav justify-content-center">
     <li class="nav-item d-inline-flex">
         <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">База знаний</a>
@@ -107,6 +104,8 @@
 
 <!-- Optional JavaScript -->
 <script>
+    var knowledgeData = "{{range .Knowledge}}id_inner:{{.InnerId}},question:{{.QuestionId}},k_id_true:{{.TrueQuestionId}},k_id_false:{{.FalseQuestionId}},diagnosis:{{.DiagnosisId}}\n{{end}}";
+    var knowledge;
     var amount = parseInt("{{.Amount}}");
     var currAmount = 0;
     var questionsDict;
@@ -116,7 +115,7 @@
     var diagnosisCard;
 
     JQFUNS = {
-        parseStrData: function (data) {
+        parseSelectionData: function (data) {
             var questionsSplit = data.split("\n");
             questionsSplit.pop();
 
@@ -130,6 +129,30 @@
             return map;
         }
         ,
+        parseKnowledgeData: function (data) {
+            if (data == "")
+                return null;
+
+            var knowledgeSplit = data.split("\n");
+            knowledgeSplit.pop();
+
+            var res = [];
+            for (var i = 0; i < knowledgeSplit.length; i++) {
+                var knowledge_row = new Object();
+                var properties = knowledgeSplit[i].split(",");
+                for (var j = 0; j < properties.length; j++)
+                {
+                    var keyValuePair = properties[j].split(":");
+                    knowledge_row[keyValuePair[0]] = keyValuePair[1] == "<nil>"
+                        ? null
+                        : parseInt(keyValuePair[1]);
+                }
+                res.push(knowledge_row);
+            }
+
+            return res;
+        }
+        ,
         newCard: function (card, data) {
             var res = $(card).clone();
             var selection = res.find(".form-control-sm");
@@ -141,59 +164,113 @@
                     .appendTo( selection );
             });
 
+            var next_id = 0;
+            var all_ids = [];
+            $( "[k_id]" ).each(function( index ) {
+                all_ids.push(parseInt($( this ).attr("k_id")));
+            });
+            if (all_ids.length > 0)
+            {
+                var maxEl = Math.max.apply(Math, all_ids);
+                next_id = maxEl + 1;
+            }
+            res.attr("k_id", next_id);
+            res.find(".text-summary").first().text(res.find(":selected").text());
             return res;
         }
         ,
         newQuestionCard: function () {
-            return JQFUNS.newCard(questionCard, questionsDict);
-        }
-        ,
-        onNewCardCreated: function (card, creator) {
-            card.insertAfter(creator);
-            card.attr("k_id", currAmount++);
+            var card = JQFUNS.newCard(questionCard, questionsDict);
+            card.find("[condition]").attr("filled", false);
+            return card;
         }
         ,
         newDiagnosisCard: function () {
             return JQFUNS.newCard(diagnosisCard, diagnosesDict);
         }
+        ,
+        onClickCreateCard: function (creator) {
+            var detailsObj = $(creator).parent();
+            detailsObj.find(".badge").hide();
+            detailsObj.attr("filled", true);
+            if (detailsObj.hasClass("bg-dark"))
+                detailsObj.removeClass("bg-dark");
+        }
+        ,
+        initKnowledgeBase: function () {
+            var root = $("div[k_id='"+ 0 +"']");
+
+            JQFUNS.deserializedCard(root, knowledge[0]);
+        }
+        ,
+        deserializedCard: function (card, kn_i_row) {
+            var knowledge_row = kn_i_row;
+            var is_question = knowledge_row.question != null;
+
+            card.find("[selected=selected]").first().removeAttr("selected");
+            var selectedVal = is_question? knowledge_row.question : knowledge_row.diagnosis;
+            card.find("option[value='" + selectedVal + "']")
+                .first()
+                .attr("selected", "selected");
+            card.find(".text-summary").first().text(card.find(":selected").first().text());
+
+            if (!is_question)
+                return;
+
+            var conditions_order = [[knowledge_row.k_id_true, true], [knowledge_row.k_id_false, false]];
+            if (knowledge_row.k_id_true > knowledge_row.k_id_false)
+            {
+                conditions_order.reverse();
+            }
+
+            conditions_order.forEach(function(i) {
+                var next_k_id = i[0];
+                var next_k_row = knowledge.find(k => {
+                    return k.id_inner == next_k_id
+                });
+                var next_is_question = next_k_row.question != null;
+
+                var condition_val = i[1];
+                var condition = card.find(".list-group").children("[condition='"+ condition_val +"']").first();
+                condition.find(next_is_question? ".create-question" : ".create-diagnosis").first().click();
+                condition.attr("open", "open");
+                condition.find(".card").first().attr("k_id", next_k_id);
+                JQFUNS.deserializedCard($("[k_id='"+ next_k_id +"']"), next_k_row);
+            });
+        }
     }
     window.onload = function(){
-        questionsDict = JQFUNS.parseStrData("{{range .Questions}}{{.Id}}.{{.Text}}\n{{end}}");
-        diagnosesDict = JQFUNS.parseStrData("{{range .Diagnosis}}{{.Id}}.{{.Name}}\n{{end}}");
-
-        questionCard = $( ".question-card" ).clone();
+        questionsDict = JQFUNS.parseSelectionData("{{range .Questions}}{{.Id}}.{{.Text}}\n{{end}}");
+        diagnosesDict = JQFUNS.parseSelectionData("{{range .Diagnosis}}{{.Id}}.{{.Name}}\n{{end}}");
+        knowledge     = JQFUNS.parseKnowledgeData("{{range .Knowledge}}id_inner:{{.InnerId}},question:{{.QuestionId}},k_id_true:{{.TrueQuestionId}},k_id_false:{{.FalseQuestionId}},diagnosis:{{.DiagnosisId}}\n{{end}}");
+        questionCard  = $( ".question-card" ).clone();
         diagnosisCard = $( ".diagnosis-card" ).clone();
         $(".card").remove();
-        var card = JQFUNS.newQuestionCard();
-        card.appendTo("main");
-        card.attr("k_id", currAmount++);
-        card.find(".text-summary").first().text(card.find(":selected").text());
-        card.find(".deleter").first().remove();
+
+        var mainCard = JQFUNS.newQuestionCard();
+        mainCard.appendTo("main");
+        mainCard.find(".deleter").first().remove();
+
+        if (knowledge != null)
+            JQFUNS.initKnowledgeBase();
     };
 
     $(document).on('click', '.deleter', function () {
         var cardForDelete = $(this).parent().parent();
         var details = cardForDelete.parent();
         details.children().show();
+        details.attr("filled", false);
         cardForDelete.remove();
-        currAmount --;
     });
 
-    $(document).on('click', '.create-question', function () {
-        $(this).parent().find(".badge").hide();
-
-        var depth = parseInt($(this).parent().parent().attr("depth")) + 1;
-        var newQuestion = JQFUNS.newQuestionCard();
-        JQFUNS.onNewCardCreated(newQuestion, this);
-
+    $(document).on('click', '.create-question', function (k_id = null) {
+        JQFUNS.onClickCreateCard(this);
+        JQFUNS.newQuestionCard().insertAfter(this);
     });
 
     $(document).on('click', '.create-diagnosis', function () {
-        $(this).parent().find(".badge").hide();
-
-        var depth = parseInt($(this).parent().parent().attr("depth")) + 1;
-        var newDiagnosis = JQFUNS.newDiagnosisCard();
-        JQFUNS.onNewCardCreated(newDiagnosis, this);
+        JQFUNS.onClickCreateCard(this);
+        JQFUNS.newDiagnosisCard().insertAfter(this);
     });
 
     $(document).on('click', '.text-summary', function () {
@@ -210,38 +287,55 @@
 
     jQuery('#saveBtn').click(function(event){
         event.preventDefault();
+
+        var conditionsAmount = $("[condition]").length;
+        var filledTCondAmount = $("[filled=true]").length;
+        var filledFCond = $("[filled=false]");
+
+        // alert(
+        //     "condition.length: "  + conditionsAmount + "\n" +
+        //     "filled[true].length: " + filledTCondAmount + "\n" +
+        //     "filled[false].length: " + filledFCond.length
+        // );
+        if (conditionsAmount !== filledTCondAmount)
+        {
+            filledFCond.addClass("bg-dark");
+            alert("Заполните все условия!");
+            return;
+        }
+
         var formInputData = new Object();
         formInputData.knowledges = [];
 
         var cards = $("[k_id]");
 
         for (var i = 0; i < cards.length; i++) {
-            var knowledge = new Object();
-            knowledge.id_inner = parseInt($(cards[i]).attr("k_id"));
-            knowledge.question = $(cards[i]).find("[name=questions]").first().val();
+            var input_knowledge = new Object();
+            input_knowledge.id_inner = parseInt($(cards[i]).attr("k_id"));
+            input_knowledge.question = $(cards[i]).find("[name=questions]").first().val();
 
-            if (typeof knowledge.question === 'undefined') {
-                knowledge.question = null;
-                knowledge.k_id_true = null;
-                knowledge.k_id_false = null;
-                knowledge.diagnosis = $(cards[i]).find("[name=diagnoses]").first().val();
-                knowledge.diagnosis = (knowledge.diagnosis === undefined)? null : parseInt(knowledge.diagnosis);
+            if (typeof input_knowledge.question === 'undefined') {
+                input_knowledge.question = null;
+                input_knowledge.k_id_true = null;
+                input_knowledge.k_id_false = null;
+                input_knowledge.diagnosis = $(cards[i]).find("[name=diagnoses]").first().val();
+                input_knowledge.diagnosis = (input_knowledge.diagnosis === undefined)? null : parseInt(input_knowledge.diagnosis);
             }
             else {
-                knowledge.question = parseInt(knowledge.question);
-                knowledge.k_id_true = $(cards[i]).find("[condition=true]").first().find(".card").first().attr("k_id");
-                knowledge.k_id_true = (knowledge.k_id_true === undefined)? null : parseInt(knowledge.k_id_true);
-                knowledge.k_id_false = $(cards[i]).children().last().children().last().children().last().find(".card").first().attr("k_id");
-                knowledge.k_id_false = (knowledge.k_id_false === undefined)? null : parseInt(knowledge.k_id_false);
-                knowledge.diagnosis = null;
+                input_knowledge.question = parseInt(input_knowledge.question);
+                input_knowledge.k_id_true = $(cards[i]).find("[condition=true]").first().find(".card").first().attr("k_id");
+                input_knowledge.k_id_true = (input_knowledge.k_id_true === undefined)? null : parseInt(input_knowledge.k_id_true);
+                input_knowledge.k_id_false = $(cards[i]).children().last().children().last().children().last().find(".card").first().attr("k_id");
+                input_knowledge.k_id_false = (input_knowledge.k_id_false === undefined)? null : parseInt(input_knowledge.k_id_false);
+                input_knowledge.diagnosis = null;
             }
 
-            formInputData.knowledges.push(knowledge);
+            formInputData.knowledges.push(input_knowledge);
         }
 
         var json_data = JSON.stringify(formInputData);
 
-        alert(json_data);
+        // alert(json_data);
 
         var xhr = new XMLHttpRequest();
         xhr.open("POST", "./add");

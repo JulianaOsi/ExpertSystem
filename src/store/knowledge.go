@@ -181,6 +181,23 @@ func (s *Store) GetKnowledgeByInnerId(ctx context.Context, symptomId int, innerI
 	return nil, fmt.Errorf("knowledge arr failed: %v", err)
 }
 
+func (s *Store) DeleteKnowledgeBySymptomId(ctx context.Context, symptomId int) error {
+	sql, _, err := goqu.Select().
+		From("knowledge").
+		Where(goqu.C("id_symptom").Eq(symptomId)).
+		Delete().
+		ToSQL()
+	if err != nil {
+		return fmt.Errorf("sql query build failed: %v", err)
+	}
+
+	if _, err := s.connPool.Exec(ctx, sql); err != nil {
+		return fmt.Errorf("execute a query failed: %v", err)
+	}
+
+	return nil
+}
+
 func readKnowledge(row pgx.Row) (*Knowledge, error) {
 	var d Knowledge
 

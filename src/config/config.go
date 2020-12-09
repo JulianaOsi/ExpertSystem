@@ -4,7 +4,6 @@ import (
 	"expertSystem/src/store"
 )
 
-var SigningKey = []byte("")
 var DBPassword = ""
 
 type Config struct {
