@@ -317,6 +317,11 @@ func addKnowledgeHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("failed to unmarshal json: %v\n", err)
 	}
 
+	err = store.DB.DeleteKnowledgeBySymptomId(context.Background(), symptomId)
+	if err != nil {
+		log.Fatalf("failed to delete knowledge: %v\n", err)
+	}
+
 	for i, _ := range k.Ks {
 		k.Ks[i].SymptomId = symptomId
 		err := store.DB.CreateKnowledge(context.Background(), k.Ks[i])
