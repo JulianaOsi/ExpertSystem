@@ -5,6 +5,11 @@
     <title>Title</title>
 </head>
 <body>
-Поздравляем, у вас {{.Diagnosis.Name}}
+Предполагаемый диагноз: {{.Diagnosis.Name}}
+<hr>
+На основе ваших ответов:
+<ol>
+    {{range .Questions}}<li>{{.Question.Text}} {{.Answer}}</li>{{end}}
+</ol>
 </body>
 </html>

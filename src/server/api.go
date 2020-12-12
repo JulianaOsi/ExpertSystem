@@ -136,11 +136,84 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v.Knowledge.DiagnosisId != nil {
-		v.Diagnosis, err = store.DB.GetDiagnosisById(context.Background(), *v.Knowledge.DiagnosisId)
+		type question struct {
+			Question *store.Question
+			Answer   string
+		}
+		type viewConclusionData struct {
+			Knowledge []*store.Knowledge
+			Questions []question
+			Diagnosis *store.Diagnosis
+		}
+		var vc viewConclusionData
+
+		k, err := store.DB.GetKnowledgeBySymptomId(context.Background(), symptom)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			logrus.Errorf("failed to get knowledge by symptom id: %v\n", err)
+			return
+		}
+
+		vc.Diagnosis, err = store.DB.GetDiagnosisById(context.Background(), *v.Knowledge.DiagnosisId)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			logrus.Errorf("failed to get diagnosis by id: %v\n", err)
 			return
+		}
+
+		var cond = true
+		var id = -1
+
+		for cond != false {
+			for i, _ := range k {
+				if k[i].InnerId == knowledgeId && id == -1 {
+					vc.Knowledge = append(vc.Knowledge, k[i])
+					id = k[i].InnerId
+				}
+				if k[i].TrueQuestionId != nil {
+					if *k[i].TrueQuestionId == id {
+						vc.Knowledge = append(vc.Knowledge, k[i])
+						id = k[i].InnerId
+						if k[i].InnerId == 0 {
+							cond = false
+						}
+					}
+				}
+				if k[i].FalseQuestionId != nil {
+					if *k[i].FalseQuestionId == id {
+						vc.Knowledge = append(vc.Knowledge, k[i])
+						id = k[i].InnerId
+						if k[i].InnerId == 0 {
+							cond = false
+						}
+					}
+				}
+			}
+		}
+
+		for i, _ := range vc.Knowledge {
+			var q question
+			if vc.Knowledge[i].QuestionId != nil {
+				q.Question, err = store.DB.GetQuestionsById(context.Background(), vc.Knowledge[i].QuestionId)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					logrus.Errorf("failed to get question by id: %v\n", err)
+					return
+				}
+				for j, _ := range vc.Knowledge {
+					if vc.Knowledge[i].TrueQuestionId != nil {
+						if vc.Knowledge[j].InnerId == *vc.Knowledge[i].TrueQuestionId {
+							q.Answer = "ДА"
+						}
+					}
+					if vc.Knowledge[i].FalseQuestionId != nil {
+						if vc.Knowledge[j].InnerId == *vc.Knowledge[i].FalseQuestionId {
+							q.Answer = "НЕТ"
+						}
+					}
+				}
+				vc.Questions = append(vc.Questions, q)
+			}
 		}
 
 		temp, err := template.ParseFiles("src/server/templates/conclusion.html")
@@ -150,7 +223,7 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		buf := new(bytes.Buffer)
-		err = temp.Execute(buf, v)
+		err = temp.Execute(buf, vc)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			logrus.Errorf("failed to execute template: %v\n", err)
